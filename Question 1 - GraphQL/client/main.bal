@@ -33,50 +33,49 @@ public function main() {
         return;
     }
 
-    // Define the GraphQL client endpoint.
-    graphql:ClientEndpoint clientEP = new({
-        url: "http://localhost:3000/graphql", 
-    });
-
     // Create a GraphQL client for making queries/mutations.
-    graphql:Client graphqlClient = new(clientEP);
+    graphql:Client graphqlClient = check new("http://localhost:3000/graphql");
 
-    // Use the GraphQL client to send queries/mutations to the service based on the user's input and access level.
-    graphql:Request request;
-
-    // Example 1: Create department objectives (for HoD)
+    // Create department objectives (for HoD)
     if (accessLevel == "1") {
         string objectiveCode = io:readln("Enter department objectives code: ");
-        Department_Objectives objective = { objectives_code: objectiveCode };
-        request = graphqlClient.newRequest(`
-            mutation CreateObjective($objective: Department_Objectives) {
-                createObjective(objectives: $objective) {
+        string objectiveName = io:readln("Enter department objectives name: ");
+        var response = graphqlClient->execute(string `
+            mutation {
+                createObjective(objectives_code: "${objectiveCode}", objectiveName: "${objectiveName}") {
                     message
                 }
             }
         `);
-        request.setVariable("objective", objective);
     }
+
+    // Handle the response as needed.
+    if (response is graphql:Response<json>) {
+        json? result = response.data;
+        io:println(result.toString());
+    } else {
+        io:println("Error in GraphQL request: " + response.toString());
+    }
+}
 
     // Example 2: Delete department objectives (for HoD)
     if (accessLevel == "1") {
         string objectiveCodeToDelete = io:readln("Enter department objectives code to delete: ");
-        request = graphqlClient.newRequest(`
-            mutation DeleteObjective($objectives_code: String) {
+        request = graphqlClient->execute(string `
+            mutation {
                 deleteObjective(objectives_code: $objectives_code) {
                     objectives_code
                 }
             }
-        `);
-        request.setVariable("objectives_code", objectiveCodeToDelete);
+        `, { "objectives_code": objectiveCodeToDelete }, "", {}, []);
     }
 
     // Example 3: View Employee Scores (for all access levels)
     if (accessLevel == "1" || accessLevel == "2" || accessLevel == "3") {
         string employeeCodeToView = io:readln("Enter employee code to view scores: ");
-        request = graphqlClient.newRequest(`
-            query ViewEmployeeScores($employeeCode: String) {
-                viewEmployeeScores(employeeCode: $employeeCode) {
+        request = graphqlClient->execute(string `
+            query {
+                viewEmployeeScores(employeeCode: $employeeCodeToView) {
                     employeeCode
                     FirstName
                     LastName
@@ -89,27 +88,22 @@ public function main() {
                     TotalScore
                 }
             }
-        `);
-        request.setVariable("employeeCode", employeeCodeToView);
+        `, { "employeeCodeToView": employeeCodeToView }, "", {}, []);
     }
 
     // Example 4: Assign Employee to Supervisor (for all access levels)
     if (accessLevel == "1" || accessLevel == "2" || accessLevel == "3") {
         string employeeCodeToAssign = io:readln("Enter employee code to assign to a supervisor: ");
         string supervisorCodeToAssign = io:readln("Enter supervisor code: ");
-        request = graphqlClient.newRequest(`
-            mutation AssignSupervisor($employeeCode: String, $supervisorCode: String) {
-                assignSupervisor(employeeCode: $employeeCode, supervisorCode: $supervisorCode)
+        request = graphqlClient->execute(string `
+            mutation {
+                assignSupervisor(employeeCode: $employeeCodeToAssign, supervisorCode: $supervisorCodeToAssign)
             }
-        `);
-        request.setVariable("employeeCode", employeeCodeToAssign);
-        request.setVariable("supervisorCode", supervisorCodeToAssign);
+        `, { "employeeCodeToAssign": employeeCodeToAssign, "supervisorCodeToAssign": supervisorCodeToAssign }, "", {}, []);
     }
 
-    // Additional cases for other functions can be added here...
-
     // Send the GraphQL request to the service.
-    graphql:Response response = clientEP->execute(request);
+    graphql:Response response = graphqlClient->execute(request);
 
     // Check the response and handle the result as needed.
     if (response is graphql:Response<json>) {

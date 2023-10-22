@@ -11,6 +11,7 @@ type HoD record {
 //Department Objectives record
 type Department_Objectives record {
     readonly string objectives_code;
+    string objectiveName;
 };
 
 //Supervisor record
