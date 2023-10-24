@@ -1,6 +1,29 @@
 import ballerina/graphql;
 import ballerinax/mongodb;
 
+mongodb:ConnectionConfig mongoConfig = {
+connection: {
+host: "localhost",
+port: 27017,
+auth: {
+username: "",
+password: ""
+},
+options: {
+sslEnabled: false,
+serverSelectionTimeout: 5000
+}
+},
+databaseName: "Performance-management"
+};
+
+mongodb:Client mongoClient = check new (mongoConfig);
+configurable string departmentCollection = "Departments";
+configurable string objectiveCollection = "Objectives";
+configurable string userCollection = "Users";
+configurable string kpiCollection = "KPIs";
+configurable string databaseName = "performance-management";
+
 type Department record {
     int id;
     string name;
@@ -53,28 +76,7 @@ type UpdatedUserDetails record {
 };
 
 
-mongodb:ConnectionConfig mongoConfig = {
-connection: {
-host: "localhost",
-port: 27017,
-auth: {
-username: "",
-password: ""
-},
-options: {
-sslEnabled: false,
-serverSelectionTimeout: 5000
-}
-},
-databaseName: "Performance-management"
-};
 
-mongodb:Client mongoClient = check new (mongoConfig);
-configurable string departmentCollection = "Departments";
-configurable string objectiveCollection = "Objectives";
-configurable string userCollection = "Users";
-configurable string kpiCollection = "KPIs";
-configurable string databaseName = "performance-management";
 
 
 
