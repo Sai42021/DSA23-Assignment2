@@ -1,7 +1,11 @@
-import ballerina/io;
 import ballerina/graphql;
+import ballerina/io;
 
-public function main() {
+type response record {|
+    record {|anydata dt;|} data;
+|};
+
+public function main() returns error? {
     io:println("Welcome to the HR Service Client");
     io:println("Please choose your access level:");
     io:println("1. HoD");
@@ -10,7 +14,6 @@ public function main() {
 
     string accessLevel = io:readln("Enter your access level (1/2/3): ");
 
-    string username = io:readln("Enter your username: ");
     string password = io:readln("Enter your password (password for all users is '1234'): ");
 
     if (password != "1234") {
@@ -18,62 +21,54 @@ public function main() {
         return;
     }
 
-    string employeeCode;
-    string supervisorCode;
-    string hodCode;
-
     if (accessLevel == "3") {
-        employeeCode = io:readln("Enter your employee code: ");
+        string employeeCode = io:readln("Enter your employee code: ");
     } else if (accessLevel == "2") {
-        supervisorCode = io:readln("Enter your supervisor code: ");
+        string supervisorCode = io:readln("Enter your supervisor code: ");
     } else if (accessLevel == "1") {
-        hodCode = io:readln("Enter your HoD code: ");
+        string hodCode = io:readln("Enter your HoD code: ");
     } else {
         io:println("Invalid access level. Exiting.");
         return;
     }
 
     // Create a GraphQL client for making queries/mutations.
-    graphql:Client graphqlClient = check new("http://localhost:3000/graphql");
+    graphql:Client graphqlClient = check new ("http://localhost:3000/graphql");
 
     // Create department objectives (for HoD)
     if (accessLevel == "1") {
         string objectiveCode = io:readln("Enter department objectives code: ");
-        string objectiveName = io:readln("Enter department objectives name: ");
-        var response = graphqlClient->execute(string `
-            mutation {
-                createObjective(objectives_code: "${objectiveCode}", objectiveName: "${objectiveName}") {
-                    message
-                }
-            }
-        `);
+        string nameObjective = io:readln("Enter department objectives name: ");
+
+        string createObj = string `
+    mutation createObjective($objectives_code:String!,$objectiveName:String!){
+        createObjective(newObjective:{objectives_code:$objectives_code,objectiveName:$objectiveName})
+    }`;
+
+        response createObjectiveResponse = check graphqlClient->execute(createObj, {"objectives_code": objectiveCode, "objectiveName": nameObjective});
+
+        io:println("Response ", createObjectiveResponse);
     }
 
-    // Handle the response as needed.
-    if (response is graphql:Response<json>) {
-        json? result = response.data;
-        io:println(result.toString());
-    } else {
-        io:println("Error in GraphQL request: " + response.toString());
-    }
-}
-
-    // Example 2: Delete department objectives (for HoD)
+    // Delete department objectives (for HoD)
     if (accessLevel == "1") {
         string objectiveCodeToDelete = io:readln("Enter department objectives code to delete: ");
-        request = graphqlClient->execute(string `
-            mutation {
-                deleteObjective(objectives_code: $objectives_code) {
-                    objectives_code
-                }
-            }
-        `, { "objectives_code": objectiveCodeToDelete }, "", {}, []);
+
+        string deleteObj = string `
+    mutation deleteObjective($objectives_code:String!){
+        deleteObjective(objectiveToBeDeleted:{objectives_code:$objectives_code})
+    }`;
+
+        response deleteObjectiveResponse = check graphqlClient->execute(deleteObj, {"objectives_code": objectiveCodeToDelete});
+
+        io:println("Response ", deleteObjectiveResponse);
     }
 
-    // Example 3: View Employee Scores (for all access levels)
+    // View Employee Scores (for all access levels)
     if (accessLevel == "1" || accessLevel == "2" || accessLevel == "3") {
         string employeeCodeToView = io:readln("Enter employee code to view scores: ");
-        request = graphqlClient->execute(string `
+
+        string viewScore = string `
             query {
                 viewEmployeeScores(employeeCode: $employeeCodeToView) {
                     employeeCode
@@ -87,29 +82,26 @@ public function main() {
                     Innovative_Teaching_Methods_KPI
                     TotalScore
                 }
-            }
-        `, { "employeeCodeToView": employeeCodeToView }, "", {}, []);
+            }`;
+
+        response viewScoreResponse = check graphqlClient->execute(viewScore, {"employeeCodeToView": employeeCodeToView});
+        io:println("Response ", viewScoreResponse);
     }
 
-    // Example 4: Assign Employee to Supervisor (for all access levels)
+    // Assign Employee to Supervisor (for all access levels)
     if (accessLevel == "1" || accessLevel == "2" || accessLevel == "3") {
         string employeeCodeToAssign = io:readln("Enter employee code to assign to a supervisor: ");
         string supervisorCodeToAssign = io:readln("Enter supervisor code: ");
-        request = graphqlClient->execute(string `
-            mutation {
-                assignSupervisor(employeeCode: $employeeCodeToAssign, supervisorCode: $supervisorCodeToAssign)
-            }
-        `, { "employeeCodeToAssign": employeeCodeToAssign, "supervisorCodeToAssign": supervisorCodeToAssign }, "", {}, []);
+
+        string doc = string `
+    mutation assignSupervisor($employeeCode:String!,$supervisorCode:String!){
+        assignSupervisor(newSupervisor:{employeeCode:$employeeCode,supervisorCode:$supervisorCode})
+    }`;
+
+        response assignSupervisorResponse = check graphqlClient->execute(doc, {"employeeCode": employeeCodeToAssign, "supervisorCode": supervisorCodeToAssign});
+
+        io:println("Response ", assignSupervisorResponse);
+
     }
 
-    // Send the GraphQL request to the service.
-    graphql:Response response = graphqlClient->execute(request);
-
-    // Check the response and handle the result as needed.
-    if (response is graphql:Response<json>) {
-        json? result = response.data;
-        io:println(result.toString());
-    } else {
-        io:println("Error in GraphQL request: " + response.toString());
-    }
 }
