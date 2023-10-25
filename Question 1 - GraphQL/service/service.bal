@@ -1,5 +1,6 @@
 import ballerina/graphql;
 import ballerinax/mongodb;
+import ballerina/io;
 
 mongodb:ConnectionConfig mongoConfig = {
 connection: {
@@ -78,8 +79,8 @@ type UpdatedUserDetails record {
     graphiql: {
         enabled: true
     }
-
-service / on new graphql:listener(9090){
+}
+service / graphql on new graphql:Listener(9090){
 
     // query
 
